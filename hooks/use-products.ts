@@ -6,15 +6,39 @@ import type { Database } from '@/types/database'
 type ProductInsert = Omit<Database['public']['Tables']['products']['Insert'], 'user_id'>
 type ProductUpdate = Database['public']['Tables']['products']['Update'] & { id: number }
 
+export type ProductWithPrice = Database['public']['Tables']['products']['Row'] & {
+  avg_price: number | null
+  last_price: number | null
+  usage_count: number
+}
+
 export function useProducts() {
   const { session } = useAuth()
 
   return useQuery({
     queryKey: ['products'],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('products').select('*').order('name')
+    queryFn: async (): Promise<ProductWithPrice[]> => {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*, feira_items(unit_price, created_at)')
+        .order('name')
+
       if (error) throw error
-      return data
+
+      return (data as any[]).map((p) => {
+        const items: { unit_price: number; created_at: string }[] = p.feira_items ?? []
+        const count = items.length
+        const avg =
+          count > 0 ? items.reduce((sum, i) => sum + Number(i.unit_price), 0) / count : null
+        const last =
+          count > 0
+            ? Number(
+                [...items].sort((a, b) => b.created_at.localeCompare(a.created_at))[0].unit_price
+              )
+            : null
+        const { feira_items, ...rest } = p
+        return { ...rest, avg_price: avg, last_price: last, usage_count: count }
+      })
     },
     enabled: !!session,
   })
