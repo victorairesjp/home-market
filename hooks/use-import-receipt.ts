@@ -41,11 +41,19 @@ export function matchProduct(
   let found = products.find((p) => normalizeName(p.name) === needle)
   if (found) return found
 
-  // 2. Product name contains item name (or vice versa), min 3 chars overlap
-  if (needle.length >= 3) {
+  // 2. All words of the receipt name appear as whole words in the product name (or vice versa).
+  //    Word-level check avoids "uva" matching "suco de uva" as a false substring.
+  const needleWords = needle.split(/\s+/).filter((w) => w.length >= 3)
+  if (needleWords.length > 0) {
     found = products.find((p) => {
-      const pn = normalizeName(p.name)
-      return pn.includes(needle) || needle.includes(pn)
+      const pnWords = normalizeName(p.name).split(/\s+/)
+      // receipt words all present in product → e.g. "arroz" matches "arroz branco"
+      const receiptInProduct = needleWords.every((w) => pnWords.includes(w))
+      // product words all present in receipt → e.g. "leite integral" matches "leite integral desnatado"
+      const productInReceipt = pnWords
+        .filter((w) => w.length >= 3)
+        .every((w) => needleWords.includes(w))
+      return receiptInProduct || productInReceipt
     })
   }
 

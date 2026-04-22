@@ -341,8 +341,7 @@ export default function ScanReceiptScreen() {
   // ── Image capture ──────────────────────────────────────────────────────────
 
   const handleCapture = useCallback(
-    async (source: 'camera' | 'gallery') => {
-      // Request permissions
+    async (source: 'camera' | 'gallery', mode: 'replace' | 'append' = 'replace') => {
       if (source === 'camera') {
         const { status } = await ImagePicker.requestCameraPermissionsAsync()
         if (status !== 'granted') {
@@ -373,29 +372,34 @@ export default function ScanReceiptScreen() {
       if (result.canceled || !result.assets[0]) return
 
       const asset = result.assets[0]
-
-      // Store retry function
-      const retry = () => handleCapture(source)
+      const retry = () => handleCapture(source, mode)
       setLastCaptureFn(() => retry)
 
-      setStep({ id: 'loading', message: 'Lendo cupom fiscal...' })
+      setStep({
+        id: 'loading',
+        message: mode === 'append' ? 'Lendo cupom adicional...' : 'Lendo cupom fiscal...',
+      })
 
       try {
         const { items: parsed, usedClaude } = await parseReceipt(asset.uri, asset.mimeType ?? undefined)
 
         if (parsed.length === 0) {
-          setStep({
-            id: 'error',
-            message: usedClaude
-              ? 'Nenhum item foi identificado. Tente com uma foto mais nítida e bem iluminada.'
-              : 'Configure EXPO_PUBLIC_GOOGLE_VISION_KEY no arquivo .env para usar o reconhecimento automático.',
-            onRetry: retry,
-          })
+          if (mode === 'append') {
+            setStep({ id: 'review' })
+            Alert.alert('Nenhum item encontrado', 'Nenhum produto foi identificado nessa imagem.')
+          } else {
+            setStep({
+              id: 'error',
+              message: usedClaude
+                ? 'Nenhum item foi identificado. Tente com uma foto mais nítida e bem iluminada.'
+                : 'Configure EXPO_PUBLIC_GOOGLE_VISION_KEY no arquivo .env para usar o reconhecimento automático.',
+              onRetry: retry,
+            })
+          }
           return
         }
 
-        // Match each parsed item to an existing product
-        const reviewItems: ReviewItem[] = parsed.map((p: ParsedItem) => {
+        const newItems: ReviewItem[] = parsed.map((p: ParsedItem) => {
           const matched = matchProduct(p.name, products)
           return {
             localId: makeLocalId(),
@@ -406,18 +410,31 @@ export default function ScanReceiptScreen() {
           }
         })
 
-        setItems(reviewItems)
+        setItems((prev) => (mode === 'append' ? [...prev, ...newItems] : newItems))
         setStep({ id: 'review' })
       } catch (err: any) {
-        setStep({
-          id: 'error',
-          message: err?.message ?? 'Erro inesperado ao processar o cupom.',
-          onRetry: retry,
-        })
+        if (mode === 'append') {
+          setStep({ id: 'review' })
+          Alert.alert('Erro ao ler cupom', err?.message ?? 'Erro inesperado ao processar o cupom.')
+        } else {
+          setStep({
+            id: 'error',
+            message: err?.message ?? 'Erro inesperado ao processar o cupom.',
+            onRetry: retry,
+          })
+        }
       }
     },
     [products]
   )
+
+  function handleAddMore() {
+    Alert.alert('Adicionar outro cupom', 'Como deseja capturar?', [
+      { text: 'Câmera', onPress: () => handleCapture('camera', 'append') },
+      { text: 'Galeria', onPress: () => handleCapture('gallery', 'append') },
+      { text: 'Cancelar', style: 'cancel' },
+    ])
+  }
 
   // ── Item editing ───────────────────────────────────────────────────────────
 
@@ -646,6 +663,26 @@ export default function ScanReceiptScreen() {
                 {formatCurrency(total)}
               </Text>
             </View>
+
+            <Pressable
+              onPress={handleAddMore}
+              style={({ pressed }) => ({
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                borderRadius: 14,
+                padding: 13,
+                borderWidth: 1.5,
+                borderColor: c.primary,
+                opacity: pressed ? 0.7 : 1,
+              })}
+            >
+              <Ionicons name="add-circle-outline" size={18} color={c.primary} />
+              <Text style={{ color: c.primary, fontWeight: '600', fontSize: 15 }}>
+                Adicionar outro cupom
+              </Text>
+            </Pressable>
 
             <Pressable
               onPress={handleSave}
