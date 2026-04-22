@@ -54,7 +54,14 @@ export function DrawerContent(props: DrawerContentComponentProps) {
   function handleLogout() {
     Alert.alert('Sair', 'Deseja encerrar a sessão?', [
       { text: 'Cancelar', style: 'cancel' },
-      { text: 'Sair', style: 'destructive', onPress: () => supabase.auth.signOut() },
+      {
+        text: 'Sair',
+        style: 'destructive',
+        onPress: async () => {
+          props.navigation.closeDrawer()
+          await supabase.auth.signOut()
+        },
+      },
     ])
   }
 

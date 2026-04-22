@@ -1,13 +1,12 @@
 import { Button } from '@/components/ui/button'
 import { TextInput } from '@/components/ui/text-input'
 import { PRIMARY, useColors } from '@/constants/colors'
-import { useAuth } from '@/hooks/use-auth'
 import { supabase } from '@/lib/supabase'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as Linking from 'expo-linking'
 import { router } from 'expo-router'
 import * as WebBrowser from 'expo-web-browser'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { Alert, KeyboardAvoidingView, Pressable, ScrollView, Text, View } from 'react-native'
 import { z } from 'zod'
@@ -23,7 +22,6 @@ type FormData = z.infer<typeof schema>
 
 export default function Index() {
   const c = useColors()
-  const { session } = useAuth()
   const [loading, setLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
 
@@ -32,12 +30,6 @@ export default function Index() {
     handleSubmit,
     formState: { errors },
   } = useForm<FormData>({ resolver: zodResolver(schema) })
-
-  useEffect(() => {
-    if (session) {
-      router.replace('/(app)/(dashboard)')
-    }
-  }, [session])
 
   async function onSubmit({ email, password }: FormData) {
     setLoading(true)
@@ -50,10 +42,19 @@ export default function Index() {
     setGoogleLoading(true)
     try {
       const redirectTo = Linking.createURL('/')
+      console.log('[OAuth] redirectTo =', redirectTo)
+
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo, skipBrowserRedirect: true },
+        options: {
+          redirectTo,
+          skipBrowserRedirect: true,
+          queryParams: { prompt: 'select_account' },
+        },
       })
+
+      console.log('[OAuth] supabase.error =', error?.message ?? 'none')
+      console.log('[OAuth] data.url =', data?.url ?? 'none')
 
       if (error || !data.url) {
         Alert.alert('Erro', error?.message ?? 'Não foi possível iniciar o login com Google')
@@ -61,10 +62,41 @@ export default function Index() {
       }
 
       const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo)
+      console.log('[OAuth] result =', result.type, 'url' in result ? result.url : '')
 
       if (result.type === 'success' && result.url) {
-        const { error: sessionError } = await supabase.auth.exchangeCodeForSession(result.url)
-        if (sessionError) Alert.alert('Erro', sessionError.message)
+        const url = result.url
+        const codeMatch = url.match(/[?&]code=([^&]+)/)
+        if (codeMatch) {
+          const code = decodeURIComponent(codeMatch[1])
+          const { error: sessionError } = await supabase.auth.exchangeCodeForSession(code)
+          if (sessionError) Alert.alert('Erro', sessionError.message)
+          return
+        }
+        const hashIdx = url.indexOf('#')
+        if (hashIdx >= 0) {
+          const hashParams = url.slice(hashIdx + 1).split('&').reduce((acc, part) => {
+            const [k, v] = part.split('=')
+            if (k && v) acc[k] = decodeURIComponent(v)
+            return acc
+          }, {} as Record<string, string>)
+          const accessToken = hashParams.access_token
+          const refreshToken = hashParams.refresh_token
+          if (accessToken && refreshToken) {
+            const { error: sessionError } = await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken,
+            })
+            if (sessionError) Alert.alert('Erro', sessionError.message)
+            return
+          }
+        }
+        Alert.alert('Erro', 'Tokens não encontrados na resposta do OAuth')
+      } else if (result.type !== 'cancel' && result.type !== 'dismiss') {
+        Alert.alert(
+          'Login Google não concluído',
+          `Adicione esta URL ao painel do Supabase (Authentication → URL Configuration → Redirect URLs):\n\n${redirectTo}`
+        )
       }
     } finally {
       setGoogleLoading(false)
