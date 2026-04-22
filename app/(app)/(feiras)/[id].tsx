@@ -3,10 +3,12 @@ import { Alert, FlatList, Pressable, Text, View } from 'react-native'
 import { Stack, useLocalSearchParams } from 'expo-router'
 import Animated, { FadeInDown, FadeOutLeft } from 'react-native-reanimated'
 import { AddItemForm } from '@/components/feiras/add-item-form'
+import { FeiraEditForm } from '@/components/feiras/feira-form'
 import { Card } from '@/components/ui/card'
 import { Loading } from '@/components/ui/loading'
 import { EmptyState } from '@/components/ui/empty-state'
-import { useColors, PRIMARY } from '@/constants/colors'
+import { HeaderAddButton } from '@/components/ui/header-add-button'
+import { useColors } from '@/constants/colors'
 import { useFeira } from '@/hooks/use-feiras'
 import { useDeleteFeiraItem } from '@/hooks/use-feira-items'
 import { formatCurrency, formatDate } from '@/lib/format'
@@ -67,6 +69,7 @@ export default function FeiraDetailScreen() {
   const feiraId = Number(id)
   const { data: feira, isLoading } = useFeira(feiraId)
   const [showAddItem, setShowAddItem] = useState(false)
+  const [showEdit, setShowEdit] = useState(false)
 
   if (isLoading) return <Loading />
   if (!feira) return null
@@ -77,10 +80,13 @@ export default function FeiraDetailScreen() {
         options={{
           title: feira.name,
           headerLargeTitle: false,
-          headerRight: () => (
-            <Pressable onPress={() => setShowAddItem(true)}>
-              <Text style={{ fontSize: 15, color: PRIMARY, fontWeight: '600' }}>+ Item</Text>
+          headerLeft: () => (
+            <Pressable onPress={() => setShowEdit(true)} hitSlop={10}>
+              <Text style={{ fontSize: 15, color: c.primary, fontWeight: '500' }}>Editar</Text>
             </Pressable>
+          ),
+          headerRight: () => (
+            <HeaderAddButton label="Item" onPress={() => setShowAddItem(true)} />
           ),
         }}
       />
@@ -138,6 +144,12 @@ export default function FeiraDetailScreen() {
         feiraId={feiraId}
         visible={showAddItem}
         onClose={() => setShowAddItem(false)}
+      />
+
+      <FeiraEditForm
+        visible={showEdit}
+        onClose={() => setShowEdit(false)}
+        feira={feira}
       />
     </>
   )

@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Alert, Pressable, SectionList, Text, TextInput as RNTextInput, View } from 'react-native'
 import { Stack } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 import Animated, { FadeInDown, FadeOutLeft } from 'react-native-reanimated'
 import { ProductForm } from '@/components/produtos/product-form'
 import { Card } from '@/components/ui/card'
@@ -10,7 +11,14 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { SegmentedControl } from '@/components/ui/segmented-control'
 import { HeaderAddButton } from '@/components/ui/header-add-button'
 import { useColors } from '@/constants/colors'
-import { useProducts, useDeleteProduct, type ProductWithPrice } from '@/hooks/use-products'
+import {
+  useProducts,
+  useDeleteProduct,
+  useSeedDefaultProducts,
+  useResetToDefaultProducts,
+  type ProductWithPrice,
+} from '@/hooks/use-products'
+import { useAuth } from '@/hooks/use-auth'
 import { CATEGORY_COLORS as CAT_COLORS } from '@/constants/app'
 import { formatCurrency } from '@/lib/format'
 import type { Product } from '@/types/database'
@@ -30,7 +38,12 @@ function ProductRow({
   const { mutate: deleteProduct } = useDeleteProduct()
 
   function handleDelete() {
-    Alert.alert('Excluir Produto', `Excluir "${product.name}"?`, [
+    const inFeiras = product.usage_count
+    const msg =
+      inFeiras > 0
+        ? `"${product.name}" foi usado em ${inFeiras} ${inFeiras === 1 ? 'feira' : 'feiras'}. Os registros dessas feiras serão afetados.`
+        : `Excluir "${product.name}"?`
+    Alert.alert('Excluir Produto', msg, [
       { text: 'Cancelar', style: 'cancel' },
       {
         text: 'Excluir',
@@ -86,11 +99,30 @@ function ProductRow({
 
 export default function ProdutosScreen() {
   const c = useColors()
+  const { session } = useAuth()
   const { data: products, isLoading } = useProducts()
+  const { mutate: seedDefaults, isPending: seeding } = useSeedDefaultProducts()
+  const { mutate: resetDefaults, isPending: resetting } = useResetToDefaultProducts()
   const [showForm, setShowForm] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [sort, setSort] = useState<SortMode>('category')
   const [search, setSearch] = useState('')
+  const autoSeededRef = useRef(false)
+
+  // Auto-seed default products for new users (once per account, tracked in AsyncStorage)
+  useEffect(() => {
+    if (isLoading || autoSeededRef.current || !session?.user.id || !products) return
+    if (products.length > 0) return
+    const key = `hm_seeded_${session.user.id}`
+    AsyncStorage.getItem(key).then((done) => {
+      if (!done) {
+        autoSeededRef.current = true
+        seedDefaults(undefined, {
+          onSuccess: () => AsyncStorage.setItem(key, '1'),
+        })
+      }
+    })
+  }, [isLoading, products, session?.user.id])
 
   const filtered = useMemo(() => {
     if (!products) return []
@@ -130,7 +162,6 @@ export default function ProdutosScreen() {
       ]
     }
 
-    // sort === 'price' — desc by avg_price, products with no price go to end
     return [
       {
         title: 'Por preço (maior → menor)',
@@ -154,7 +185,25 @@ export default function ProdutosScreen() {
     setEditingProduct(null)
   }
 
-  if (isLoading) return <Loading />
+  function handleReset() {
+    Alert.alert(
+      'Restaurar lista padrão',
+      'Isso vai apagar todos os seus produtos e o histórico de compras vinculado. Essa ação não pode ser desfeita.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Restaurar',
+          style: 'destructive',
+          onPress: () =>
+            resetDefaults(undefined, {
+              onError: (e) => Alert.alert('Erro', e.message),
+            }),
+        },
+      ]
+    )
+  }
+
+  if (isLoading || seeding || resetting) return <Loading />
 
   return (
     <>
@@ -201,12 +250,7 @@ export default function ProdutosScreen() {
               }}
             >
               <View
-                style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: 4,
-                  backgroundColor: section.color,
-                }}
+                style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: section.color }}
               />
               <Text style={{ fontSize: 13, fontWeight: '700', color: c.text }}>
                 {section.title}
@@ -218,7 +262,8 @@ export default function ProdutosScreen() {
           ) : (
             <View style={{ paddingVertical: 4 }}>
               <Text style={{ fontSize: 12, color: c.subtext, fontWeight: '500' }}>
-                {section.title} · {section.data.length} {section.data.length === 1 ? 'item' : 'itens'}
+                {section.title} · {section.data.length}{' '}
+                {section.data.length === 1 ? 'item' : 'itens'}
               </Text>
             </View>
           )
@@ -228,6 +273,16 @@ export default function ProdutosScreen() {
         )}
         ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
         SectionSeparatorComponent={() => <View style={{ height: 4 }} />}
+        ListFooterComponent={
+          products && products.length > 0 && !search.trim() ? (
+            <Pressable
+              onPress={handleReset}
+              style={{ alignItems: 'center', paddingVertical: 24, paddingTop: 32 }}
+            >
+              <Text style={{ fontSize: 13, color: c.subtext }}>Restaurar lista padrão</Text>
+            </Pressable>
+          ) : null
+        }
         ListEmptyComponent={
           search.trim() ? (
             <EmptyState
@@ -236,11 +291,33 @@ export default function ProdutosScreen() {
               description={`Não há produtos que correspondam a "${search}".`}
             />
           ) : (
-            <EmptyState
-              icon="🥕"
-              title="Nenhum produto ainda"
-              description="Toque em '+ Produto' para cadastrar seus primeiros produtos."
-            />
+            <View style={{ alignItems: 'center', gap: 16, paddingTop: 40 }}>
+              <EmptyState
+                icon="🥕"
+                title="Nenhum produto ainda"
+                description="Adicione produtos manualmente ou carregue a lista padrão."
+              />
+              <Pressable
+                onPress={() =>
+                  seedDefaults(undefined, {
+                    onSuccess: () =>
+                      session?.user.id &&
+                      AsyncStorage.setItem(`hm_seeded_${session.user.id}`, '1'),
+                    onError: (e) => Alert.alert('Erro', e.message),
+                  })
+                }
+                style={{
+                  backgroundColor: c.primary,
+                  paddingHorizontal: 24,
+                  paddingVertical: 12,
+                  borderRadius: 20,
+                }}
+              >
+                <Text style={{ color: '#fff', fontWeight: '600', fontSize: 15 }}>
+                  Carregar lista padrão
+                </Text>
+              </Pressable>
+            </View>
           )
         }
       />

@@ -15,9 +15,10 @@ type Props = {
   itemCount: number
   total: number
   index: number
+  onEdit: () => void
 }
 
-export function FeiraCard({ id, name, store, date, itemCount, total, index }: Props) {
+export function FeiraCard({ id, name, store, date, itemCount, total, index, onEdit }: Props) {
   const c = useColors()
   const { mutate: deleteFeira } = useDeleteFeira()
 
@@ -27,6 +28,7 @@ export function FeiraCard({ id, name, store, date, itemCount, total, index }: Pr
     }
     Alert.alert(name, 'O que deseja fazer?', [
       { text: 'Cancelar', style: 'cancel' },
+      { text: 'Editar', onPress: onEdit },
       {
         text: 'Excluir',
         style: 'destructive',

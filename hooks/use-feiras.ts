@@ -60,6 +60,33 @@ export function useFeira(id: number) {
   })
 }
 
+export function useFeiraDetail(id: number | null) {
+  const { session } = useAuth()
+
+  return useQuery({
+    queryKey: ['feiras', 'detail', id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('feiras')
+        .select('*, feira_items(*, products(*))')
+        .eq('id', id!)
+        .single()
+
+      if (error) throw error
+
+      return {
+        ...data,
+        total: data.feira_items.reduce(
+          (sum: number, item: { quantity: number; unit_price: number }) =>
+            sum + item.quantity * item.unit_price,
+          0
+        ),
+      }
+    },
+    enabled: !!session && id !== null,
+  })
+}
+
 export function useCreateFeira() {
   const qc = useQueryClient()
   const { session } = useAuth()

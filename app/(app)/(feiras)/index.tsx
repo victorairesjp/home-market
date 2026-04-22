@@ -3,17 +3,20 @@ import { FlatList, TextInput as RNTextInput, Text, View } from 'react-native'
 import { router, Stack } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { FeiraCard } from '@/components/feiras/feira-card'
+import { FeiraEditForm } from '@/components/feiras/feira-form'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Loading } from '@/components/ui/loading'
 import { HeaderAddButton } from '@/components/ui/header-add-button'
 import { useColors } from '@/constants/colors'
 import { useFeiras } from '@/hooks/use-feiras'
 import { formatCurrency } from '@/lib/format'
+import type { Feira } from '@/types/database'
 
 export default function FeirasScreen() {
   const c = useColors()
   const { data: feiras, isLoading } = useFeiras()
   const [search, setSearch] = useState('')
+  const [editingFeira, setEditingFeira] = useState<Feira | null>(null)
 
   const filtered = useMemo(() => {
     if (!feiras) return []
@@ -67,6 +70,7 @@ export default function FeirasScreen() {
             itemCount={item.item_count}
             total={item.total}
             index={index}
+            onEdit={() => setEditingFeira(item)}
           />
         )}
         ListEmptyComponent={
@@ -85,6 +89,14 @@ export default function FeirasScreen() {
           )
         }
       />
+
+      {editingFeira && (
+        <FeiraEditForm
+          visible={!!editingFeira}
+          onClose={() => setEditingFeira(null)}
+          feira={editingFeira}
+        />
+      )}
     </>
   )
 }

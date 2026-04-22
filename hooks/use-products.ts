@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from './use-auth'
+import { DEFAULT_PRODUCTS } from '@/constants/app'
 import type { Database } from '@/types/database'
 
 type ProductInsert = Omit<Database['public']['Tables']['products']['Insert'], 'user_id'>
@@ -87,9 +88,83 @@ export function useDeleteProduct() {
 
   return useMutation({
     mutationFn: async (id: number) => {
+      // Schema uses ON DELETE RESTRICT, so remove references first
+      const { error: itemsError } = await supabase
+        .from('feira_items')
+        .delete()
+        .eq('product_id', id)
+      if (itemsError) throw itemsError
+
       const { error } = await supabase.from('products').delete().eq('id', id)
       if (error) throw error
     },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['products'] })
+      qc.invalidateQueries({ queryKey: ['feiras'] })
+      qc.invalidateQueries({ queryKey: ['dashboard'] })
+    },
+  })
+}
+
+export function useSeedDefaultProducts() {
+  const qc = useQueryClient()
+  const { session } = useAuth()
+
+  return useMutation({
+    mutationFn: async () => {
+      const userId = session!.user.id
+      const { error } = await supabase.from('products').insert(
+        DEFAULT_PRODUCTS.map((p) => ({ ...p, user_id: userId }))
+      )
+      if (error) throw error
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['products'] }),
+  })
+}
+
+export function useResetToDefaultProducts() {
+  const qc = useQueryClient()
+  const { session } = useAuth()
+
+  return useMutation({
+    mutationFn: async () => {
+      const userId = session!.user.id
+
+      // Get all product IDs for this user
+      const { data: userProducts, error: fetchError } = await supabase
+        .from('products')
+        .select('id')
+        .eq('user_id', userId)
+      if (fetchError) throw fetchError
+
+      if (userProducts && userProducts.length > 0) {
+        const ids = userProducts.map((p) => p.id)
+
+        // Delete all feira_items that reference these products
+        const { error: itemsError } = await supabase
+          .from('feira_items')
+          .delete()
+          .in('product_id', ids)
+        if (itemsError) throw itemsError
+
+        // Delete all products
+        const { error: productsError } = await supabase
+          .from('products')
+          .delete()
+          .eq('user_id', userId)
+        if (productsError) throw productsError
+      }
+
+      // Re-insert default products
+      const { error: seedError } = await supabase.from('products').insert(
+        DEFAULT_PRODUCTS.map((p) => ({ ...p, user_id: userId }))
+      )
+      if (seedError) throw seedError
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['products'] })
+      qc.invalidateQueries({ queryKey: ['feiras'] })
+      qc.invalidateQueries({ queryKey: ['dashboard'] })
+    },
   })
 }
