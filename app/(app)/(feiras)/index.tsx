@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { FlatList, TextInput as RNTextInput, Text, View } from 'react-native'
+import { FlatList, Pressable, TextInput as RNTextInput, Text, View } from 'react-native'
 import { router, Stack } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { FeiraCard } from '@/components/feiras/feira-card'
@@ -40,7 +40,16 @@ export default function FeirasScreen() {
       <Stack.Screen
         options={{
           headerRight: () => (
-            <HeaderAddButton label="Feira" onPress={() => router.push('/(app)/(feiras)/new')} />
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <Pressable
+                onPress={() => router.push('/(app)/(feiras)/scan')}
+                hitSlop={10}
+                style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+              >
+                <Ionicons name="scan-outline" size={22} color={c.primary} />
+              </Pressable>
+              <HeaderAddButton label="Feira" onPress={() => router.push('/(app)/(feiras)/new')} />
+            </View>
           ),
         }}
       />

@@ -30,6 +30,15 @@ export default function FeirasLayout() {
         name="[id]"
         options={{ title: 'Detalhes', headerLargeTitle: false }}
       />
+      <Stack.Screen
+        name="scan"
+        options={{
+          title: 'Importar Cupom',
+          presentation: 'modal',
+          headerLargeTitle: false,
+          headerTransparent: false,
+        }}
+      />
     </Stack>
   )
 }
