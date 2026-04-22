@@ -150,6 +150,14 @@ export default function SignIn() {
             disabled={googleLoading}
             fullWidth
           />
+          <Pressable
+            onPress={() => router.push('/(auth)/forgot-password')}
+            style={{ alignSelf: 'center', paddingVertical: 4 }}
+          >
+            <Text style={{ fontSize: 14, color: PRIMARY, fontWeight: '600' }}>
+              Esqueci minha senha
+            </Text>
+          </Pressable>
         </View>
 
         {/* Sign up */}
