@@ -45,3 +45,9 @@ app-example
 
 # context for claude
 CLAUDESESSION.md
+
+# todo list
+TODOLIST.md
+
+# supabase schema
+./app/database/schema.sql
