@@ -1,5 +1,4 @@
 import { Stack } from 'expo-router/stack'
-import { MenuButton } from '@/components/navigation/menu-button'
 
 export default function ProdutosLayout() {
   return (
@@ -11,10 +10,7 @@ export default function ProdutosLayout() {
         headerBackButtonDisplayMode: 'minimal',
       }}
     >
-      <Stack.Screen
-        name="index"
-        options={{ title: 'Produtos', headerLeft: () => <MenuButton /> }}
-      />
+      <Stack.Screen name="index" options={{ title: 'Produtos' }} />
     </Stack>
   )
 }

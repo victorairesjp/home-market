@@ -1,5 +1,5 @@
 import { View, type ViewProps } from 'react-native'
-import { useColors } from '@/constants/colors'
+import { useColors, CARD_SHADOW } from '@/constants/colors'
 
 type Props = ViewProps & {
   children: React.ReactNode
@@ -14,9 +14,9 @@ export function Card({ children, style, padding = 16, ...props }: Props) {
       style={[
         {
           backgroundColor: c.card,
-          borderRadius: 16,
+          borderRadius: 20,
           padding,
-          boxShadow: c.isDark ? undefined : '0 1px 3px rgba(0,0,0,0.07)',
+          ...(c.isDark ? {} : CARD_SHADOW),
         },
         style,
       ]}

@@ -15,8 +15,8 @@ export function SegmentedControl<T extends string>({ options, value, onChange }:
       style={{
         flexDirection: 'row',
         backgroundColor: c.inputBg,
-        borderRadius: 10,
-        padding: 3,
+        borderRadius: 14,
+        padding: 4,
         gap: 2,
       }}
     >
@@ -26,23 +26,24 @@ export function SegmentedControl<T extends string>({ options, value, onChange }:
           <Pressable
             key={opt.value}
             onPress={() => onChange(opt.value)}
-            style={({ pressed }) => ({
+            style={{
               flex: 1,
-              paddingVertical: 7,
-              borderRadius: 8,
+              paddingVertical: 9,
+              borderRadius: 11,
               alignItems: 'center' as const,
-              backgroundColor: active ? c.card : pressed ? c.border : 'transparent',
-              shadowColor: active ? '#000' : 'transparent',
+              backgroundColor: active ? c.card : 'transparent',
+              shadowColor: active ? '#101828' : 'transparent',
               shadowOpacity: active ? 0.08 : 0,
-              shadowRadius: 2,
+              shadowRadius: 4,
               shadowOffset: { width: 0, height: 1 },
-            })}
+              elevation: active ? 2 : 0,
+            }}
           >
             <Text
               style={{
                 fontSize: 13,
-                fontWeight: active ? '600' : '500',
-                color: active ? c.text : c.subtext,
+                fontWeight: active ? '700' : '500',
+                color: active ? c.primary : c.subtext,
               }}
             >
               {opt.label}

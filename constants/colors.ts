@@ -1,28 +1,45 @@
 import { useColorScheme } from 'react-native'
 
-export const PRIMARY = '#4A7C59'
-export const DANGER = '#DC2626'
-export const SUCCESS = '#16A34A'
-export const WARNING = '#F59E0B'
+export const PRIMARY = '#26A96C'
+export const DANGER  = '#FF6B6B'
+export const SUCCESS = '#26A96C'
+export const WARNING = '#FFB020'
+
+// Consistent shadow helper for iOS + Android
+export const CARD_SHADOW = {
+  shadowColor: '#101828',
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.08,
+  shadowRadius: 12,
+  elevation: 4,
+}
+
+export const SHADOW_SM = {
+  shadowColor: '#101828',
+  shadowOffset: { width: 0, height: 1 },
+  shadowOpacity: 0.05,
+  shadowRadius: 6,
+  elevation: 2,
+}
 
 const light = {
-  background: '#F2F2F7',
-  card: '#FFFFFF',
-  text: '#1A1A1A',
-  subtext: '#8E8E93',
-  border: '#E5E5EA',
-  input: '#FFFFFF',
-  inputBg: '#F2F2F7',
+  background: '#F8F9FA',
+  card:       '#FFFFFF',
+  text:       '#1C2127',
+  subtext:    '#9098B1',
+  border:     '#EFF0F6',
+  input:      '#FFFFFF',
+  inputBg:    '#F4F5F7',
 }
 
 const dark = {
-  background: '#000000',
-  card: '#1C1C1E',
-  text: '#FFFFFF',
-  subtext: '#8E8E93',
-  border: '#38383A',
-  input: '#2C2C2E',
-  inputBg: '#1C1C1E',
+  background: '#0D0D0D',
+  card:       '#1A1A1E',
+  text:       '#F2F2F7',
+  subtext:    '#8E8E93',
+  border:     '#2C2C2E',
+  input:      '#2C2C2E',
+  inputBg:    '#1A1A1E',
 }
 
 export function useColors() {

@@ -51,3 +51,6 @@ TODOLIST.md
 
 # supabase schema
 ./app/database/schema.sql
+
+# regras promp claude
+/memory

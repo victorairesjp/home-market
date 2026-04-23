@@ -1,5 +1,4 @@
 import { Stack } from 'expo-router/stack'
-import { MenuButton } from '@/components/navigation/menu-button'
 
 export default function CompararLayout() {
   return (
@@ -11,10 +10,7 @@ export default function CompararLayout() {
         headerBackButtonDisplayMode: 'minimal',
       }}
     >
-      <Stack.Screen
-        name="index"
-        options={{ title: 'Comparar', headerLeft: () => <MenuButton /> }}
-      />
+      <Stack.Screen name="index" options={{ title: 'Comparar' }} />
     </Stack>
   )
 }

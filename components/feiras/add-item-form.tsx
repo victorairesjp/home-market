@@ -1,34 +1,35 @@
-import { useMemo, useRef, useState } from 'react'
+import { useState } from 'react'
 import {
   Alert,
-  FlatList,
   KeyboardAvoidingView,
   Modal,
   Platform,
   Pressable,
   ScrollView,
   Text,
-  TextInput,
   View,
 } from 'react-native'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Ionicons } from '@expo/vector-icons'
 import { Button } from '@/components/ui/button'
 import { TextInput as AppTextInput } from '@/components/ui/text-input'
 import { useColors } from '@/constants/colors'
-import { CATEGORY_COLORS as CAT_COLORS } from '@/constants/app'
-import { useProducts, type ProductWithPrice } from '@/hooks/use-products'
+import { CATEGORIES, UNITS, CATEGORY_COLORS as CAT_COLORS } from '@/constants/app'
 import { useAddFeiraItem } from '@/hooks/use-feira-items'
+import { useAuth } from '@/hooks/use-auth'
+import { supabase } from '@/lib/supabase'
 
 const schema = z.object({
-  quantity: z.string().min(1).refine((v) => !isNaN(Number(v)) && Number(v) > 0, {
-    message: 'Quantidade deve ser maior que 0',
-  }),
-  unit_price: z.string().min(1).refine((v) => !isNaN(Number(v)) && Number(v) > 0, {
-    message: 'Preço deve ser maior que 0',
-  }),
+  name: z.string().min(1, 'Nome é obrigatório'),
+  quantity: z
+    .string()
+    .min(1, 'Campo obrigatório')
+    .refine((v) => !isNaN(Number(v)) && Number(v) > 0, { message: 'Deve ser maior que 0' }),
+  unit_price: z
+    .string()
+    .min(1, 'Campo obrigatório')
+    .refine((v) => !isNaN(Number(v)) && Number(v) > 0, { message: 'Deve ser maior que 0' }),
 })
 
 type FormData = z.infer<typeof schema>
@@ -39,21 +40,63 @@ type Props = {
   onClose: () => void
 }
 
+function ChipPicker<T extends string>({
+  options,
+  value,
+  onChange,
+  colorMap,
+  c,
+}: {
+  options: readonly T[]
+  value: T
+  onChange: (v: T) => void
+  colorMap?: Record<string, string>
+  c: ReturnType<typeof useColors>
+}) {
+  return (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -4 }}>
+      <View style={{ flexDirection: 'row', gap: 8, paddingHorizontal: 4, paddingVertical: 4 }}>
+        {options.map((opt) => {
+          const active = opt === value
+          const accent = colorMap?.[opt] ?? c.primary
+          return (
+            <Pressable
+              key={opt}
+              onPress={() => onChange(opt)}
+              style={{
+                paddingHorizontal: 14,
+                paddingVertical: 7,
+                borderRadius: 20,
+                borderWidth: 1.5,
+                borderColor: active ? accent : c.border,
+                backgroundColor: active ? accent + '20' : c.inputBg,
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: 13,
+                  fontWeight: active ? '700' : '400',
+                  color: active ? accent : c.subtext,
+                }}
+              >
+                {opt}
+              </Text>
+            </Pressable>
+          )
+        })}
+      </View>
+    </ScrollView>
+  )
+}
+
 export function AddItemForm({ feiraId, visible, onClose }: Props) {
   const c = useColors()
-  const { data: products = [] } = useProducts()
+  const { session } = useAuth()
   const { mutate: addItem, isPending } = useAddFeiraItem(feiraId)
-  const [selected, setSelected] = useState<ProductWithPrice | null>(null)
-  const [search, setSearch] = useState('')
-  const searchRef = useRef<TextInput>(null)
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase()
-    if (!q) return products
-    return products.filter(
-      (p) => p.name.toLowerCase().includes(q) || p.category.toLowerCase().includes(q)
-    )
-  }, [products, search])
+  const [category, setCategory] = useState<string>(CATEGORIES[0])
+  const [unit, setUnit] = useState<string>('un')
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const {
     control,
@@ -62,39 +105,62 @@ export function AddItemForm({ feiraId, visible, onClose }: Props) {
     formState: { errors },
   } = useForm<FormData>({ resolver: zodResolver(schema) })
 
-  function onSubmit(data: FormData) {
-    if (!selected) return
-    addItem(
-      {
-        feira_id: feiraId,
-        product_id: selected.id,
-        quantity: Number(data.quantity),
-        unit_price: Number(data.unit_price),
-      },
-      {
-        onSuccess: () => handleClose(),
-        onError: (e) => Alert.alert('Erro', e.message),
+  async function onSubmit(data: FormData) {
+    if (!session) return
+    setIsSubmitting(true)
+    try {
+      const trimmedName = data.name.trim()
+
+      // Find existing product by name (case-insensitive) or create one
+      const { data: existing } = await supabase
+        .from('products')
+        .select('id')
+        .eq('user_id', session.user.id)
+        .ilike('name', trimmedName)
+        .maybeSingle()
+
+      let productId: number
+
+      if (existing) {
+        productId = existing.id
+      } else {
+        const { data: created, error: createError } = await supabase
+          .from('products')
+          .insert({ name: trimmedName, category, unit, user_id: session.user.id })
+          .select('id')
+          .single()
+
+        if (createError) throw createError
+        productId = created.id
       }
-    )
+
+      addItem(
+        {
+          feira_id: feiraId,
+          product_id: productId,
+          quantity: Number(data.quantity),
+          unit_price: Number(data.unit_price),
+        },
+        {
+          onSuccess: () => handleClose(),
+          onError: (e) => Alert.alert('Erro', e.message),
+        }
+      )
+    } catch (e: any) {
+      Alert.alert('Erro', e.message)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   function handleClose() {
     reset()
-    setSelected(null)
-    setSearch('')
+    setCategory(CATEGORIES[0])
+    setUnit('un')
     onClose()
   }
 
-  function handleSelect(product: ProductWithPrice) {
-    setSelected(product)
-    setSearch('')
-  }
-
-  function handleClearProduct() {
-    setSelected(null)
-    setSearch('')
-    setTimeout(() => searchRef.current?.focus(), 150)
-  }
+  const loading = isPending || isSubmitting
 
   return (
     <Modal
@@ -125,177 +191,84 @@ export function AddItemForm({ feiraId, visible, onClose }: Props) {
           </Pressable>
         </View>
 
-        {!selected ? (
-          // ── Step 1: search + select product ──────────────────────────────
-          <>
-            <View style={{ padding: 16, paddingBottom: 8 }}>
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 10,
-                  backgroundColor: c.inputBg,
-                  borderRadius: 12,
-                  paddingHorizontal: 14,
-                  height: 46,
-                  borderWidth: 1,
-                  borderColor: c.border,
-                }}
-              >
-                <Ionicons name="search" size={18} color={c.subtext} />
-                <TextInput
-                  ref={searchRef}
-                  autoFocus
-                  placeholder="Buscar produto ou categoria..."
-                  placeholderTextColor={c.subtext}
-                  value={search}
-                  onChangeText={setSearch}
-                  style={{ flex: 1, fontSize: 16, color: c.text }}
-                  clearButtonMode="while-editing"
-                  autoCapitalize="none"
-                  returnKeyType="search"
-                />
-              </View>
+        <ScrollView
+          contentContainerStyle={{ padding: 20, gap: 20, paddingBottom: 48 }}
+          keyboardShouldPersistTaps="handled"
+        >
+          <Controller
+            control={control}
+            name="name"
+            render={({ field }) => (
+              <AppTextInput
+                label="Nome do produto"
+                placeholder="Ex: Arroz, Leite, Banana..."
+                autoCapitalize="words"
+                autoFocus
+                value={field.value}
+                onChangeText={field.onChange}
+                error={errors.name?.message}
+              />
+            )}
+          />
+
+          <View style={{ gap: 8 }}>
+            <Text style={{ fontSize: 13, fontWeight: '500', color: c.subtext }}>Categoria</Text>
+            <ChipPicker
+              options={CATEGORIES}
+              value={category}
+              onChange={setCategory}
+              colorMap={CAT_COLORS}
+              c={c}
+            />
+          </View>
+
+          <View style={{ gap: 8 }}>
+            <Text style={{ fontSize: 13, fontWeight: '500', color: c.subtext }}>Unidade</Text>
+            <ChipPicker options={UNITS} value={unit} onChange={setUnit} c={c} />
+          </View>
+
+          <View style={{ flexDirection: 'row', gap: 12 }}>
+            <View style={{ flex: 1 }}>
+              <Controller
+                control={control}
+                name="quantity"
+                render={({ field }) => (
+                  <AppTextInput
+                    label={`Qtd (${unit})`}
+                    placeholder="1"
+                    keyboardType="decimal-pad"
+                    value={field.value}
+                    onChangeText={field.onChange}
+                    error={errors.quantity?.message}
+                  />
+                )}
+              />
             </View>
-
-            <FlatList
-              data={filtered}
-              keyExtractor={(item) => String(item.id)}
-              keyboardShouldPersistTaps="handled"
-              contentContainerStyle={{ paddingBottom: 40 }}
-              ItemSeparatorComponent={() => (
-                <View style={{ height: 1, backgroundColor: c.border, marginLeft: 50 }} />
-              )}
-              renderItem={({ item }) => (
-                <Pressable
-                  onPress={() => handleSelect(item)}
-                  style={({ pressed }) => ({
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    paddingHorizontal: 16,
-                    paddingVertical: 14,
-                    backgroundColor: pressed ? c.inputBg : 'transparent',
-                  })}
-                >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-                    <View
-                      style={{
-                        width: 10,
-                        height: 10,
-                        borderRadius: 5,
-                        backgroundColor: CAT_COLORS[item.category] ?? '#9E9E9E',
-                      }}
-                    />
-                    <View>
-                      <Text style={{ fontSize: 16, fontWeight: '500', color: c.text }}>
-                        {item.name}
-                      </Text>
-                      <Text style={{ fontSize: 13, color: c.subtext }}>
-                        {item.category}
-                        {item.last_price != null
-                          ? ` · último: R$${item.last_price.toFixed(2)}/${item.unit}`
-                          : ''}
-                      </Text>
-                    </View>
-                  </View>
-                  <Text style={{ fontSize: 14, color: c.subtext }}>{item.unit}</Text>
-                </Pressable>
-              )}
-              ListEmptyComponent={
-                <View style={{ alignItems: 'center', padding: 48, gap: 10 }}>
-                  <Text style={{ fontSize: 30 }}>🔍</Text>
-                  <Text style={{ fontSize: 15, fontWeight: '600', color: c.text }}>
-                    Nenhum produto encontrado
-                  </Text>
-                  <Text style={{ fontSize: 14, color: c.subtext, textAlign: 'center' }}>
-                    Cadastre o produto na aba Produtos antes de adicioná-lo à feira.
-                  </Text>
-                </View>
-              }
-            />
-          </>
-        ) : (
-          // ── Step 2: fill quantity and price ──────────────────────────────
-          <ScrollView
-            contentContainerStyle={{ padding: 20, gap: 20 }}
-            keyboardShouldPersistTaps="handled"
-          >
-            {/* Selected product chip */}
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                backgroundColor: c.primary + '18',
-                borderRadius: 14,
-                padding: 14,
-                borderWidth: 1.5,
-                borderColor: c.primary,
-              }}
-            >
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
-                <View
-                  style={{
-                    width: 10,
-                    height: 10,
-                    borderRadius: 5,
-                    backgroundColor: CAT_COLORS[selected.category] ?? '#9E9E9E',
-                  }}
-                />
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 16, fontWeight: '600', color: c.text }}>
-                    {selected.name}
-                  </Text>
-                  <Text style={{ fontSize: 13, color: c.subtext }}>
-                    {selected.category} · {selected.unit}
-                  </Text>
-                </View>
-              </View>
-              <Pressable onPress={handleClearProduct} hitSlop={10}>
-                <Ionicons name="close-circle" size={22} color={c.subtext} />
-              </Pressable>
+            <View style={{ flex: 1 }}>
+              <Controller
+                control={control}
+                name="unit_price"
+                render={({ field }) => (
+                  <AppTextInput
+                    label="Preço (R$)"
+                    placeholder="0,00"
+                    keyboardType="decimal-pad"
+                    value={field.value}
+                    onChangeText={field.onChange}
+                    error={errors.unit_price?.message}
+                  />
+                )}
+              />
             </View>
+          </View>
 
-            <Controller
-              control={control}
-              name="quantity"
-              render={({ field }) => (
-                <AppTextInput
-                  label={`Quantidade (${selected.unit})`}
-                  placeholder="0"
-                  keyboardType="decimal-pad"
-                  autoFocus
-                  value={field.value}
-                  onChangeText={field.onChange}
-                  error={errors.quantity?.message}
-                />
-              )}
-            />
-
-            <Controller
-              control={control}
-              name="unit_price"
-              render={({ field }) => (
-                <AppTextInput
-                  label="Preço Unitário (R$)"
-                  placeholder="0,00"
-                  keyboardType="decimal-pad"
-                  value={field.value}
-                  onChangeText={field.onChange}
-                  error={errors.unit_price?.message}
-                />
-              )}
-            />
-
-            <Button
-              title="Adicionar"
-              onPress={handleSubmit(onSubmit)}
-              loading={isPending}
-              fullWidth
-            />
-          </ScrollView>
-        )}
+          <Button
+            title="Adicionar item"
+            onPress={handleSubmit(onSubmit)}
+            loading={loading}
+            fullWidth
+          />
+        </ScrollView>
       </KeyboardAvoidingView>
     </Modal>
   )

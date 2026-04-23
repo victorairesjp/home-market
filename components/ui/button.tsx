@@ -26,21 +26,22 @@ export function Button({
   const c = useColors()
 
   const bg: Record<Variant, string> = {
-    primary: c.primary,
+    primary:   c.primary,
     secondary: c.inputBg,
-    danger: c.danger,
-    ghost: 'transparent',
+    danger:    c.danger,
+    ghost:     'transparent',
   }
 
   const fg: Record<Variant, string> = {
-    primary: '#FFFFFF',
+    primary:   '#FFFFFF',
     secondary: c.text,
-    danger: '#FFFFFF',
-    ghost: c.primary,
+    danger:    '#FFFFFF',
+    ghost:     c.primary,
   }
 
-  const heights: Record<Size, number> = { sm: 36, md: 46, lg: 54 }
-  const fontSizes: Record<Size, number> = { sm: 13, md: 15, lg: 17 }
+  const heights: Record<Size, number>    = { sm: 40, md: 52, lg: 58 }
+  const radii: Record<Size, number>      = { sm: 12, md: 16, lg: 18 }
+  const fontSizes: Record<Size, number>  = { sm: 13, md: 15, lg: 17 }
 
   return (
     <Pressable
@@ -49,18 +50,28 @@ export function Button({
       style={({ pressed }) => ({
         backgroundColor: bg[variant],
         height: heights[size],
-        borderRadius: 14,
+        borderRadius: radii[size],
         justifyContent: 'center' as const,
         alignItems: 'center' as const,
-        paddingHorizontal: 20,
-        opacity: disabled || loading ? 0.5 : pressed ? 0.8 : 1,
+        paddingHorizontal: 24,
+        opacity: disabled || loading ? 0.5 : pressed ? 0.82 : 1,
         width: fullWidth ? ('100%' as const) : undefined,
+        // Subtle shadow on primary only
+        ...(variant === 'primary' && !disabled && !c.isDark
+          ? {
+              shadowColor: c.primary,
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.3,
+              shadowRadius: 8,
+              elevation: 6,
+            }
+          : {}),
       })}
     >
       {loading ? (
         <ActivityIndicator color={fg[variant]} size="small" />
       ) : (
-        <Text style={{ color: fg[variant], fontSize: fontSizes[size], fontWeight: '600' }}>
+        <Text style={{ color: fg[variant], fontSize: fontSizes[size], fontWeight: '700', letterSpacing: 0.2 }}>
           {title}
         </Text>
       )}

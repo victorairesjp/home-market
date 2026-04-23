@@ -1,41 +1,32 @@
 import { Stack } from 'expo-router/stack'
-import { MenuButton } from '@/components/navigation/menu-button'
 
 export default function FeirasLayout() {
   return (
     <Stack
       screenOptions={{
-        headerLargeTitle: true,
-        headerTransparent: true,
-        headerBlurEffect: 'prominent',
         headerBackButtonDisplayMode: 'minimal',
+        headerLargeTitle: false,
+        headerTransparent: false,
+        headerBlurEffect: 'prominent',
       }}
     >
-      <Stack.Screen
-        name="index"
-        options={{ title: 'Feiras', headerLeft: () => <MenuButton /> }}
-      />
+      <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen
         name="new"
         options={{
           title: 'Nova Feira',
           presentation: 'formSheet',
-          headerLargeTitle: false,
           headerTransparent: false,
           sheetGrabberVisible: true,
-          sheetAllowedDetents: [0.75, 1.0],
+          sheetAllowedDetents: [0.85, 1.0],
         }}
       />
-      <Stack.Screen
-        name="[id]"
-        options={{ title: 'Detalhes', headerLargeTitle: false }}
-      />
+      <Stack.Screen name="[id]" options={{ title: '', headerTransparent: true }} />
       <Stack.Screen
         name="scan"
         options={{
           title: 'Importar Cupom',
           presentation: 'modal',
-          headerLargeTitle: false,
           headerTransparent: false,
         }}
       />

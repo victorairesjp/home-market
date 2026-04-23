@@ -10,29 +10,33 @@ export function TextInput({ label, error, style, ...props }: Props) {
   const c = useColors()
 
   return (
-    <View style={{ gap: 6 }}>
+    <View style={{ gap: 8 }}>
       {label && (
-        <Text style={{ fontSize: 13, fontWeight: '500', color: c.subtext }}>{label}</Text>
+        <Text style={{ fontSize: 13, fontWeight: '600', color: c.subtext, letterSpacing: 0.3 }}>
+          {label.toUpperCase()}
+        </Text>
       )}
       <RNTextInput
         style={[
           {
-            backgroundColor: c.input,
-            borderRadius: 12,
-            paddingHorizontal: 14,
-            paddingVertical: 12,
+            backgroundColor: error ? c.danger + '10' : c.inputBg,
+            borderRadius: 14,
+            paddingHorizontal: 16,
+            paddingVertical: 14,
             fontSize: 16,
             color: c.text,
-            minHeight: 46,
-            borderWidth: 1,
-            borderColor: error ? c.danger : c.border,
+            minHeight: 52,
+            borderWidth: 1.5,
+            borderColor: error ? c.danger : 'transparent',
           },
           style,
         ]}
         placeholderTextColor={c.subtext}
         {...props}
       />
-      {error && <Text style={{ fontSize: 12, color: c.danger }}>{error}</Text>}
+      {error && (
+        <Text style={{ fontSize: 12, color: c.danger, fontWeight: '500' }}>{error}</Text>
+      )}
     </View>
   )
 }
