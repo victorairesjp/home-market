@@ -1,8 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   Alert,
   FlatList,
-  Keyboard,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -13,16 +12,18 @@ import {
   View,
 } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
+import { SquarePen, FilePlus, History, ScanLine } from 'lucide-react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import * as Haptics from 'expo-haptics'
 import { CameraView, useCameraPermissions } from 'expo-camera'
 import { useColors, PRIMARY, CARD_BORDER } from '@/constants/colors'
 import { CATEGORIES, UNITS, CATEGORY_COLORS } from '@/constants/app'
+import { router } from 'expo-router'
 import { useShoppingList, type ShoppingItem } from '@/hooks/use-shopping-list'
 import { useFeiras } from '@/hooks/use-feiras'
-import { useAuth } from '@/hooks/use-auth'
 import { supabase } from '@/lib/supabase'
 import { formatCurrency } from '@/lib/format'
+import { saveFeiraDraft } from '@/lib/feira-draft'
 
 // ─── Add Item Modal ────────────────────────────────────────────────────────────
 
@@ -280,7 +281,7 @@ function ShoppingRow({ item, onToggle, onRemove, onEdit }: {
       )}
 
       <Pressable onPress={onEdit} hitSlop={10}>
-        <Ionicons name="ellipsis-horizontal-outline" size={16} color={c.subtext} />
+        <SquarePen size={18} color={c.subtext} strokeWidth={1.5} />
       </Pressable>
     </Pressable>
   )
@@ -294,10 +295,10 @@ function InitScreen({ onSelect }: { onSelect: (mode: InitMode) => void }) {
   const c      = useColors()
   const insets = useSafeAreaInsets()
 
-  const OPTIONS: { mode: InitMode; icon: keyof typeof Ionicons.glyphMap; label: string; desc: string; accent: string }[] = [
-    { mode: 'from_last', icon: 'copy-outline',  label: 'Última feira',    desc: 'Começa com os itens da feira anterior', accent: PRIMARY },
-    { mode: 'empty',     icon: 'list-outline',  label: 'Lista em branco', desc: 'Adicionar itens manualmente',           accent: '#6366F1' },
-    { mode: 'barcode',   icon: 'scan-outline',  label: 'Scan de código',  desc: 'Digitalizar produtos pelo código',      accent: '#F59E0B' },
+  const OPTIONS: { mode: InitMode; Icon: React.ComponentType<any>; label: string; desc: string; accent: string }[] = [
+    { mode: 'from_last', Icon: History,     label: 'Última feira',    desc: 'Começa com os itens da feira anterior', accent: PRIMARY },
+    { mode: 'empty',     Icon: FilePlus,    label: 'Lista em branco', desc: 'Adicionar itens manualmente',           accent: '#6366F1' },
+    { mode: 'barcode',   Icon: ScanLine,    label: 'Scan de código',  desc: 'Digitalizar produtos pelo código',      accent: '#F59E0B' },
   ]
 
   return (
@@ -328,7 +329,7 @@ function InitScreen({ onSelect }: { onSelect: (mode: InitMode) => void }) {
             <View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, backgroundColor: opt.accent }} />
 
             <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: opt.accent + '15', justifyContent: 'center', alignItems: 'center' }}>
-              <Ionicons name={opt.icon} size={20} color={opt.accent} />
+              <opt.Icon size={20} color={opt.accent} strokeWidth={1.5} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={{ fontSize: 15, fontWeight: '600', color: c.text }}>{opt.label}</Text>
@@ -347,7 +348,6 @@ function InitScreen({ onSelect }: { onSelect: (mode: InitMode) => void }) {
 export default function ListaScreen() {
   const c      = useColors()
   const insets = useSafeAreaInsets()
-  const { session }    = useAuth()
   const { data: feiras = [] } = useFeiras()
 
   const sl = useShoppingList()
@@ -358,7 +358,7 @@ export default function ListaScreen() {
   const [pendingBarcode,   setPendingBarcode]   = useState<string | undefined>()
   const [pendingName,      setPendingName]      = useState<string | undefined>()
   const [pendingPrice,     setPendingPrice]     = useState<number | undefined>()
-  const [finalizing,       setFinalizing]       = useState(false)
+  const [submitting,       setSubmitting]       = useState(false)
 
   async function handleInitSelect(mode: InitMode) {
     if (mode === 'empty') {
@@ -423,64 +423,44 @@ export default function ListaScreen() {
 
   async function handleFinalize() {
     if (!sl.list || sl.list.items.length === 0) return
-    if (!session?.user) return
+    if (submitting) return
+
+    const checkedItems = sl.list.items.filter((i) => i.checked)
+    if (checkedItems.length === 0) {
+      Alert.alert(
+        'Nenhum item marcado',
+        'Marque os itens comprados antes de finalizar a feira.'
+      )
+      return
+    }
 
     Alert.alert(
-      'Finalizar feira',
-      `Guardar ${sl.list.items.length} itens como nova feira no Supabase?`,
+      'Registrar como feira?',
+      `Deseja salvar ${checkedItems.length} ${checkedItems.length === 1 ? 'item marcado' : 'itens marcados'} como uma nova feira?`,
       [
-        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Agora não', style: 'cancel' },
         {
-          text: 'Guardar',
+          text: 'Registrar',
           style: 'default',
           onPress: async () => {
             try {
-              setFinalizing(true)
-              const today = new Date().toISOString().split('T')[0]!
-              const { data: feira, error: feiraErr } = await supabase
-                .from('feiras')
-                .insert({ name: `Feira ${new Date().toLocaleDateString('pt-BR')}`, store: '', date: today, user_id: session.user.id })
-                .select()
-                .single()
-              if (feiraErr) throw feiraErr
-
-              for (const item of sl.list!.items) {
-                let productId: number | null = null
-
-                const { data: existing } = await supabase
-                  .from('products')
-                  .select('id')
-                  .eq('user_id', session.user.id)
-                  .ilike('name', item.name.trim())
-                  .maybeSingle()
-
-                if (existing) {
-                  productId = existing.id
-                } else {
-                  const { data: newProd } = await supabase
-                    .from('products')
-                    .insert({ name: item.name, category: item.category, unit: item.unit, user_id: session.user.id })
-                    .select('id')
-                    .single()
-                  if (newProd) productId = newProd.id
-                }
-
-                if (productId) {
-                  await supabase.from('feira_items').insert({
-                    feira_id: feira.id,
-                    product_id: productId,
-                    quantity: item.qty,
-                    unit_price: item.price,
-                  })
-                }
-              }
-
-              sl.clearList()
-              Alert.alert('Guardada!', 'A sua feira foi guardada com sucesso.')
+              setSubmitting(true)
+              await saveFeiraDraft({
+                suggestedName: `Feira ${new Date().toLocaleDateString('pt-BR')}`,
+                source: 'list',
+                items: checkedItems.map((i) => ({
+                  name: i.name,
+                  category: i.category,
+                  unit: i.unit,
+                  quantity: i.qty,
+                  unit_price: i.price,
+                })),
+              })
+              router.push('/(app)/(feiras)/new')
             } catch {
-              Alert.alert('Erro', 'Não foi possível guardar a feira.')
+              Alert.alert('Erro', 'Não foi possível preparar a feira.')
             } finally {
-              setFinalizing(false)
+              setSubmitting(false)
             }
           },
         },
@@ -493,6 +473,9 @@ export default function ListaScreen() {
   if (!sl.list) return <InitScreen onSelect={handleInitSelect} />
 
   const progress = sl.totalCount > 0 ? sl.checkedCount / sl.totalCount : 0
+
+  // Checked items go to the end; within each group keep original order
+  const sortedItems = [...sl.list.items].sort((a, b) => Number(a.checked) - Number(b.checked))
 
   return (
     <View style={{ flex: 1, backgroundColor: c.background }}>
@@ -534,18 +517,26 @@ export default function ListaScreen() {
           <View style={{ height: '100%', width: `${progress * 100}%`, backgroundColor: PRIMARY, borderRadius: 2 }} />
         </View>
 
-        {/* Total */}
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
-          <Text style={{ fontSize: 13, color: c.subtext }}>Total</Text>
-          <Text style={{ fontSize: 26, fontWeight: '700', color: PRIMARY, fontVariant: ['tabular-nums'] }}>
-            {formatCurrency(sl.grandTotal)}
-          </Text>
+        {/* Totais — Gasto (destaque) + Estimado (discreto) */}
+        <View style={{ gap: 4 }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
+            <Text style={{ fontSize: 13, color: c.subtext, fontWeight: '600' }}>Total Gasto</Text>
+            <Text style={{ fontSize: 30, fontWeight: '800', color: PRIMARY, fontVariant: ['tabular-nums'] }}>
+              {formatCurrency(sl.total)}
+            </Text>
+          </View>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
+            <Text style={{ fontSize: 11, color: c.subtext }}>Estimado</Text>
+            <Text style={{ fontSize: 13, fontWeight: '500', color: c.subtext, fontVariant: ['tabular-nums'] }}>
+              {formatCurrency(sl.grandTotal)}
+            </Text>
+          </View>
         </View>
       </View>
 
       {/* List */}
       <FlatList
-        data={sl.list.items}
+        data={sortedItems}
         keyExtractor={(item) => item.id}
         contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 140, gap: 10 }}
         showsVerticalScrollIndicator={false}
@@ -595,7 +586,7 @@ export default function ListaScreen() {
 
         <Pressable
           onPress={handleFinalize}
-          disabled={finalizing || sl.totalCount === 0}
+          disabled={submitting || sl.totalCount === 0}
           style={{
             flex: 1.6,
             borderRadius: 14,
@@ -607,7 +598,7 @@ export default function ListaScreen() {
           }}
         >
           <Text style={{ fontSize: 15, fontWeight: '700', color: '#fff' }}>
-            {finalizing ? 'A guardar…' : 'Finalizar'}
+            {submitting ? 'A preparar…' : 'Finalizar'}
           </Text>
         </Pressable>
       </View>

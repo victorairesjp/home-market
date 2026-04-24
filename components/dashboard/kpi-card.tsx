@@ -22,6 +22,8 @@ export function KpiCard({ title, value, subtitle, trend, index = 0, accent }: Pr
     <Animated.View entering={FadeInDown.delay(index * 80).springify()} style={{ flex: 1 }}>
       <View
         style={{
+          flex: 1,
+          minHeight: 140,
           backgroundColor: c.card,
           borderRadius: 20,
           padding: 18,

@@ -1,13 +1,13 @@
 import { useMemo, useState } from 'react'
-import { FlatList, Pressable, Text, View } from 'react-native'
+import { FlatList, Pressable, Text, TextInput, View } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
+import { Search, X } from 'lucide-react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Loading } from '@/components/ui/loading'
 import { EmptyState } from '@/components/ui/empty-state'
 import { SegmentedControl } from '@/components/ui/segmented-control'
 import { useColors, CARD_SHADOW } from '@/constants/colors'
-import { CATEGORY_COLORS } from '@/constants/app'
 import { usePriceHistory, type ProductPriceHistory } from '@/hooks/use-price-history'
 import { formatCurrency, formatDateShort } from '@/lib/format'
 
@@ -74,24 +74,14 @@ function MiniBarChart({ history, c }: { history: ProductPriceHistory['history'];
 function ProductCard({ item }: { item: ProductPriceHistory }) {
   const c = useColors()
   const [expanded, setExpanded] = useState(false)
-  const catColor = CATEGORY_COLORS[item.category] ?? '#9E9E9E'
 
   return (
     <Pressable onPress={() => setExpanded((v) => !v)}>
       <View style={{ backgroundColor: c.card, borderRadius: 20, padding: 16, gap: 12, ...(c.isDark ? {} : CARD_SHADOW) }}>
         {/* Header */}
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-          <View
-            style={{
-              width: 46, height: 46, borderRadius: 15,
-              backgroundColor: catColor + '20',
-              justifyContent: 'center', alignItems: 'center', flexShrink: 0,
-            }}
-          >
-            <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: catColor }} />
-          </View>
           <View style={{ flex: 1, gap: 3 }}>
-            <Text style={{ fontSize: 15, fontWeight: '700', color: c.text }} numberOfLines={1}>{item.name}</Text>
+            <Text style={{ fontSize: 19, fontWeight: '700', color: c.text }} numberOfLines={2}>{item.name}</Text>
             <Text style={{ fontSize: 12, color: c.subtext }}>
               {item.category} · {item.purchaseCount} {item.purchaseCount === 1 ? 'compra' : 'compras'}
             </Text>
@@ -163,16 +153,27 @@ export default function ComparativosScreen() {
   const insets = useSafeAreaInsets()
   const { data = [], isLoading } = usePriceHistory()
   const [filter, setFilter] = useState<FilterMode>('all')
+  const [query, setQuery] = useState('')
 
   const rising  = useMemo(() => data.filter((p) => (p.priceChange ?? 0) > 0), [data])
   const falling = useMemo(() => data.filter((p) => (p.priceChange ?? 0) < 0), [data])
   const stable  = useMemo(() => data.filter((p) => p.priceChange === 0 || p.priceChange === null), [data])
 
   const filtered = useMemo(() => {
-    if (filter === 'rising')  return rising
-    if (filter === 'falling') return falling
-    return data
-  }, [data, filter, rising, falling])
+    const base =
+      filter === 'rising'
+        // Maiores altas primeiro (priceChange desc)
+        ? [...rising].sort((a, b) => (b.priceChange ?? 0) - (a.priceChange ?? 0))
+        : filter === 'falling'
+        // Maiores quedas primeiro (priceChange asc — mais negativo primeiro)
+        ? [...falling].sort((a, b) => (a.priceChange ?? 0) - (b.priceChange ?? 0))
+        // Todos → alfabético
+        : [...data].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' }))
+
+    const q = query.trim().toLowerCase()
+    if (!q) return base
+    return base.filter((p) => p.name.toLowerCase().includes(q))
+  }, [data, filter, rising, falling, query])
 
   if (isLoading) return <Loading />
 
@@ -268,6 +269,39 @@ export default function ComparativosScreen() {
                   <Text style={{ fontSize: 28, fontWeight: '900', color: c.text }}>{stable.length}</Text>
                   <Text style={{ fontSize: 12, color: c.subtext, fontWeight: '600' }}>Estáveis</Text>
                 </View>
+              </View>
+            )}
+
+            {/* ── Search ── */}
+            {data.length > 0 && (
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 10,
+                  paddingHorizontal: 14,
+                  paddingVertical: 10,
+                  backgroundColor: c.card,
+                  borderRadius: 14,
+                  borderWidth: 1,
+                  borderColor: c.border,
+                }}
+              >
+                <Search size={16} color={c.subtext} strokeWidth={1.5} />
+                <TextInput
+                  value={query}
+                  onChangeText={setQuery}
+                  placeholder="Buscar por nome..."
+                  placeholderTextColor={c.subtext}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  style={{ flex: 1, fontSize: 15, color: c.text, paddingVertical: 0 }}
+                />
+                {query.length > 0 && (
+                  <Pressable onPress={() => setQuery('')} hitSlop={8}>
+                    <X size={16} color={c.subtext} strokeWidth={1.5} />
+                  </Pressable>
+                )}
               </View>
             )}
 

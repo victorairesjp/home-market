@@ -5,7 +5,6 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Animated, { FadeInDown } from 'react-native-reanimated'
 import { KpiCard } from '@/components/dashboard/kpi-card'
-import { SpendingChart } from '@/components/dashboard/spending-chart'
 import { CategoryChart } from '@/components/dashboard/category-chart'
 import { PriceHistory } from '@/components/dashboard/price-history'
 import { Loading } from '@/components/ui/loading'
@@ -164,6 +163,9 @@ function QuickAction({
       onPress={onPress}
       style={({ pressed }) => ({
         flex: 1,
+        alignSelf: 'stretch',
+        minHeight: 120,
+        justifyContent: 'space-between',
         backgroundColor: pressed ? c.card : c.card,
         borderRadius: 20,
         padding: 16,
@@ -279,7 +281,7 @@ export default function DashboardScreen() {
         {/* ── Quick Actions ── */}
         <Animated.View entering={FadeInDown.delay(80).springify()} style={{ gap: 12 }}>
           <SectionTitle label="Acesso rápido" />
-          <View style={{ flexDirection: 'row', gap: 12 }}>
+          <View style={{ flexDirection: 'row', gap: 12, alignItems: 'stretch' }}>
             <QuickAction
               icon="cart"
               label="Nova Feira"
@@ -307,7 +309,7 @@ export default function DashboardScreen() {
         {/* ── KPI Row ── */}
         <Animated.View entering={FadeInDown.delay(160).springify()} style={{ gap: 12 }}>
           <SectionTitle label="Resumo" />
-          <View style={{ flexDirection: 'row', gap: 12 }}>
+          <View style={{ flexDirection: 'row', gap: 12, alignItems: 'stretch' }}>
             <KpiCard
               title="Total de feiras"
               value={String(data?.totalFeiras ?? 0)}
@@ -322,7 +324,7 @@ export default function DashboardScreen() {
               accent="#F59E0B"
             />
           </View>
-          <View style={{ flexDirection: 'row', gap: 12 }}>
+          <View style={{ flexDirection: 'row', gap: 12, alignItems: 'stretch' }}>
             <KpiCard
               title="Produtos"
               value={String(data?.productCount ?? 0)}
@@ -383,9 +385,6 @@ export default function DashboardScreen() {
         {/* ── Charts ── */}
         {hasData && (
           <Animated.View entering={FadeInDown.delay(240).springify()} style={{ gap: 20 }}>
-            <SectionTitle label="Gastos ao longo do tempo" />
-            <SpendingChart data={data?.spendingOverTime ?? []} />
-
             <SectionTitle label="Por categoria" />
             <CategoryChart data={data?.categoryBreakdown ?? []} />
 

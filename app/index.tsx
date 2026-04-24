@@ -95,7 +95,7 @@ export default function Index() {
       } else if (result.type !== 'cancel' && result.type !== 'dismiss') {
         Alert.alert(
           'Login Google não concluído',
-          `Adicione esta URL ao painel do Supabase (Authentication → URL Configuration → Redirect URLs):\n\n${redirectTo}`
+          `Adicione esta URL ao painel de autenticação (Redirect URLs):\n\n${redirectTo}`
         )
       }
     } finally {

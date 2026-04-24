@@ -56,7 +56,7 @@ function ProfileHero({ email }: { email: string }) {
         >
           <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#4ADE80' }} />
           <Text style={{ color: 'rgba(255,255,255,0.9)', fontSize: 13, fontWeight: '600' }}>
-            Conta activa · Supabase
+            Conta ativa · Sincronizada
           </Text>
         </View>
       </View>
@@ -174,7 +174,7 @@ export default function MenuScreen() {
 
         {/* Data section */}
         <Section title="Dados & Privacidade">
-          <MenuRow icon="cloud-outline" label="Sincronização" sublabel="Supabase · Activo" accent={PRIMARY} />
+          <MenuRow icon="cloud-outline" label="Sincronização" sublabel="Ativa" accent={PRIMARY} />
           <MenuRow icon="shield-checkmark-outline" label="Privacidade" sublabel="Os seus dados são seus" accent="#10B981" last />
         </Section>
 
