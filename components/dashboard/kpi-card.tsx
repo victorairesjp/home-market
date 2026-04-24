@@ -49,6 +49,9 @@ export function KpiCard({ title, value, subtitle, trend, index = 0, accent }: Pr
         </Text>
         <Text
           selectable
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.6}
           style={{
             fontSize: 22,
             fontWeight: '800',

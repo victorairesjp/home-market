@@ -3,7 +3,7 @@ import Animated, { FadeInDown, FadeOutLeft } from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
 import { router } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
-import { useColors, CARD_SHADOW } from '@/constants/colors'
+import { useColors, CARD_SHADOW, CARD_BORDER } from '@/constants/colors'
 import { useDeleteFeira } from '@/hooks/use-feiras'
 import { formatCurrency, formatDateShort } from '@/lib/format'
 
@@ -46,72 +46,43 @@ export function FeiraCard({ id, name, store, date, itemCount, total, index, onEd
         <View
           style={{
             backgroundColor: c.card,
-            borderRadius: 20,
+            borderRadius: 16,
             padding: 18,
-            ...( c.isDark ? {} : CARD_SHADOW),
+            ...(c.isDark ? {} : { ...CARD_SHADOW, ...CARD_BORDER }),
           }}
         >
-          {/* Top row: store icon + name + arrow */}
+          {/* Top row */}
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 14 }}>
-            <View
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: 14,
-                backgroundColor: c.primary + '18',
-                justifyContent: 'center',
-                alignItems: 'center',
-              }}
-            >
-              <Ionicons name="cart" size={22} color={c.primary} />
-            </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 16, fontWeight: '700', color: c.text }} numberOfLines={1}>
+              <Text style={{ fontSize: 15, fontWeight: '500', color: c.text }} numberOfLines={1}>
                 {name}
               </Text>
-              <Text style={{ fontSize: 13, color: c.subtext, marginTop: 1 }} numberOfLines={1}>
-                {store}
-              </Text>
+              {!!store && (
+                <Text style={{ fontSize: 12, color: c.subtext, marginTop: 2 }} numberOfLines={1}>
+                  {store}
+                </Text>
+              )}
             </View>
-            <Ionicons name="chevron-forward" size={18} color={c.subtext} />
+            <Ionicons name="chevron-forward-outline" size={16} color={c.subtext} />
           </View>
 
           {/* Divider */}
-          <View style={{ height: 1, backgroundColor: c.border, marginBottom: 14 }} />
+          <View style={{ height: 1, backgroundColor: '#F0F0F0', marginBottom: 14 }} />
 
-          {/* Bottom row: date + items + total */}
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flex: 1 }}>
-              <Ionicons name="calendar-outline" size={13} color={c.subtext} />
-              <Text style={{ fontSize: 13, color: c.subtext }}>{formatDateShort(date)}</Text>
+          {/* Bottom row */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Ionicons name="calendar-outline" size={12} color={c.subtext} />
+              <Text style={{ fontSize: 12, color: c.subtext }}>{formatDateShort(date)}</Text>
             </View>
-
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 4,
-                backgroundColor: c.inputBg,
-                paddingHorizontal: 10,
-                paddingVertical: 4,
-                borderRadius: 20,
-              }}
-            >
-              <Ionicons name="cube-outline" size={13} color={c.subtext} />
-              <Text style={{ fontSize: 13, color: c.subtext }}>
-                {itemCount} {itemCount === 1 ? 'item' : 'itens'}
-              </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Ionicons name="bag-outline" size={12} color={c.subtext} />
+              <Text style={{ fontSize: 12, color: c.subtext }}>{itemCount} {itemCount === 1 ? 'item' : 'itens'}</Text>
             </View>
-
+            <View style={{ flex: 1 }} />
             <Text
               selectable
-              style={{
-                fontSize: 18,
-                fontWeight: '800',
-                color: c.primary,
-                fontVariant: ['tabular-nums'],
-                marginLeft: 14,
-              }}
+              style={{ fontSize: 17, fontWeight: '700', color: c.primary, fontVariant: ['tabular-nums'] }}
             >
               {formatCurrency(total)}
             </Text>

@@ -13,11 +13,10 @@ import {
   View,
 } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
-import { LinearGradient } from 'expo-linear-gradient'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import * as Haptics from 'expo-haptics'
 import { CameraView, useCameraPermissions } from 'expo-camera'
-import { useColors, PRIMARY, CARD_SHADOW, WARNING } from '@/constants/colors'
+import { useColors, PRIMARY, CARD_BORDER } from '@/constants/colors'
 import { CATEGORIES, UNITS, CATEGORY_COLORS } from '@/constants/app'
 import { useShoppingList, type ShoppingItem } from '@/hooks/use-shopping-list'
 import { useFeiras } from '@/hooks/use-feiras'
@@ -68,39 +67,35 @@ function AddItemModal({ visible, onClose, onAdd, initialBarcode, initialName, in
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <View style={{ flex: 1, backgroundColor: c.background }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', padding: 20, paddingTop: 24, borderBottomWidth: 1, borderColor: c.border }}>
-            <Text style={{ flex: 1, fontSize: 18, fontWeight: '800', color: c.text }}>Adicionar item</Text>
-            <Pressable onPress={onClose}>
-              <Ionicons name="close-circle" size={28} color={c.subtext} />
+          <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingTop: 24, paddingBottom: 16 }}>
+            <Text style={{ flex: 1, fontSize: 16, fontWeight: '600', color: c.text }}>Novo item</Text>
+            <Pressable onPress={onClose} hitSlop={8}>
+              <Ionicons name="close-outline" size={24} color={c.subtext} />
             </Pressable>
           </View>
 
-          <ScrollView contentContainerStyle={{ padding: 20, gap: 18 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+          <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32, gap: 20 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
             {/* Name */}
-            <View style={{ gap: 6 }}>
-              <Text style={{ fontSize: 11, fontWeight: '700', color: c.subtext, textTransform: 'uppercase', letterSpacing: 0.5 }}>Nome</Text>
-              <RNTextInput
-                value={name}
-                onChangeText={setName}
-                placeholder="Ex: Tomate"
-                placeholderTextColor={c.subtext}
-                style={{ backgroundColor: c.inputBg, borderRadius: 14, paddingHorizontal: 16, paddingVertical: 14, fontSize: 16, color: c.text }}
-                autoFocus
-              />
-            </View>
+            <RNTextInput
+              value={name}
+              onChangeText={setName}
+              placeholder="Nome do produto"
+              placeholderTextColor={c.subtext}
+              style={{ fontSize: 18, fontWeight: '500', color: c.text, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: c.border }}
+              autoFocus
+            />
 
             {/* Category chips */}
-            <View style={{ gap: 8 }}>
-              <Text style={{ fontSize: 11, fontWeight: '700', color: c.subtext, textTransform: 'uppercase', letterSpacing: 0.5 }}>Categoria</Text>
+            <View style={{ gap: 10 }}>
+              <Text style={{ fontSize: 11, color: c.subtext, letterSpacing: 0.4 }}>Categoria</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 <View style={{ flexDirection: 'row', gap: 8 }}>
                   {CATEGORIES.map((cat) => {
                     const active = category === cat
-                    const color  = CATEGORY_COLORS[cat] ?? '#9E9E9E'
                     return (
                       <Pressable key={cat} onPress={() => setCategory(cat)}
-                        style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: active ? color : c.inputBg }}>
-                        <Text style={{ fontSize: 13, fontWeight: '600', color: active ? '#fff' : c.subtext }}>{cat}</Text>
+                        style={{ paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, backgroundColor: active ? PRIMARY : c.inputBg }}>
+                        <Text style={{ fontSize: 13, color: active ? '#fff' : c.subtext }}>{cat}</Text>
                       </Pressable>
                     )
                   })}
@@ -109,16 +104,16 @@ function AddItemModal({ visible, onClose, onAdd, initialBarcode, initialName, in
             </View>
 
             {/* Unit chips */}
-            <View style={{ gap: 8 }}>
-              <Text style={{ fontSize: 11, fontWeight: '700', color: c.subtext, textTransform: 'uppercase', letterSpacing: 0.5 }}>Unidade</Text>
+            <View style={{ gap: 10 }}>
+              <Text style={{ fontSize: 11, color: c.subtext, letterSpacing: 0.4 }}>Unidade</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 <View style={{ flexDirection: 'row', gap: 8 }}>
                   {UNITS.map((u) => {
                     const active = unit === u
                     return (
                       <Pressable key={u} onPress={() => setUnit(u)}
-                        style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: active ? PRIMARY : c.inputBg }}>
-                        <Text style={{ fontSize: 13, fontWeight: '600', color: active ? '#fff' : c.subtext }}>{u}</Text>
+                        style={{ paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, backgroundColor: active ? PRIMARY : c.inputBg }}>
+                        <Text style={{ fontSize: 13, color: active ? '#fff' : c.subtext }}>{u}</Text>
                       </Pressable>
                     )
                   })}
@@ -126,33 +121,33 @@ function AddItemModal({ visible, onClose, onAdd, initialBarcode, initialName, in
               </ScrollView>
             </View>
 
-            {/* Qty + Price */}
-            <View style={{ flexDirection: 'row', gap: 12 }}>
+            {/* Qty + Price — inline, underline style */}
+            <View style={{ flexDirection: 'row', gap: 24 }}>
               <View style={{ flex: 1, gap: 6 }}>
-                <Text style={{ fontSize: 11, fontWeight: '700', color: c.subtext, textTransform: 'uppercase', letterSpacing: 0.5 }}>Qtd</Text>
+                <Text style={{ fontSize: 11, color: c.subtext, letterSpacing: 0.4 }}>Quantidade</Text>
                 <RNTextInput
                   value={qty}
                   onChangeText={setQty}
                   keyboardType="decimal-pad"
-                  style={{ backgroundColor: c.inputBg, borderRadius: 14, paddingHorizontal: 16, paddingVertical: 14, fontSize: 16, color: c.text }}
+                  style={{ fontSize: 17, fontWeight: '500', color: c.text, paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: c.border }}
                 />
               </View>
               <View style={{ flex: 1, gap: 6 }}>
-                <Text style={{ fontSize: 11, fontWeight: '700', color: c.subtext, textTransform: 'uppercase', letterSpacing: 0.5 }}>Preço (R$)</Text>
+                <Text style={{ fontSize: 11, color: c.subtext, letterSpacing: 0.4 }}>Preço (R$)</Text>
                 <RNTextInput
                   value={price}
                   onChangeText={setPrice}
                   keyboardType="decimal-pad"
                   placeholder="0,00"
                   placeholderTextColor={c.subtext}
-                  style={{ backgroundColor: c.inputBg, borderRadius: 14, paddingHorizontal: 16, paddingVertical: 14, fontSize: 16, color: c.text }}
+                  style={{ fontSize: 17, fontWeight: '500', color: c.text, paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: c.border }}
                 />
               </View>
             </View>
 
             <Pressable onPress={handleAdd}
-              style={{ backgroundColor: PRIMARY, borderRadius: 16, paddingVertical: 16, alignItems: 'center', marginTop: 4 }}>
-              <Text style={{ color: '#fff', fontSize: 16, fontWeight: '800' }}>Adicionar</Text>
+              style={{ backgroundColor: PRIMARY, borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginTop: 8 }}>
+              <Text style={{ color: '#fff', fontSize: 15, fontWeight: '700' }}>Adicionar</Text>
             </Pressable>
           </ScrollView>
         </View>
@@ -249,44 +244,43 @@ function ShoppingRow({ item, onToggle, onRemove, onEdit }: {
         paddingVertical: 14,
         paddingHorizontal: 16,
         backgroundColor: pressed ? c.inputBg : c.card,
-        borderRadius: 18,
-        opacity: item.checked ? 0.55 : 1,
-        ...(c.isDark ? {} : CARD_SHADOW),
+        borderRadius: 14,
+        opacity: item.checked ? 0.45 : 1,
+        ...(c.isDark ? {} : CARD_BORDER),
       })}
     >
+      {/* Category accent strip */}
+      <View style={{ width: 3, height: 36, borderRadius: 2, backgroundColor: catColor, flexShrink: 0 }} />
+
       {/* Checkbox */}
       <View style={{
-        width: 26, height: 26, borderRadius: 8,
+        width: 22, height: 22, borderRadius: 6,
         backgroundColor: item.checked ? PRIMARY : 'transparent',
-        borderWidth: 2, borderColor: item.checked ? PRIMARY : c.border,
+        borderWidth: 1.5, borderColor: item.checked ? PRIMARY : c.border,
         justifyContent: 'center', alignItems: 'center',
       }}>
-        {item.checked && <Ionicons name="checkmark" size={15} color="#fff" />}
+        {item.checked && <Ionicons name="checkmark-outline" size={13} color="#fff" />}
       </View>
-
-      {/* Category dot */}
-      <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: catColor, flexShrink: 0 }} />
 
       {/* Info */}
       <View style={{ flex: 1 }}>
-        <Text style={{ fontSize: 15, fontWeight: '600', color: c.text, textDecorationLine: item.checked ? 'line-through' : 'none' }} numberOfLines={1}>
+        <Text style={{ fontSize: 15, fontWeight: '500', color: c.text, textDecorationLine: item.checked ? 'line-through' : 'none' }} numberOfLines={1}>
           {item.name}
         </Text>
-        <Text style={{ fontSize: 12, color: c.subtext }}>
-          {item.qty} {item.unit} · {item.price > 0 ? formatCurrency(item.price) + `/${item.unit}` : 'sem preço'}
+        <Text style={{ fontSize: 12, color: c.subtext, marginTop: 1 }}>
+          {item.qty} {item.unit}{item.price > 0 ? ` · ${formatCurrency(item.price)}/${item.unit}` : ''}
         </Text>
       </View>
 
       {/* Subtotal */}
       {item.price > 0 && (
-        <Text style={{ fontSize: 14, fontWeight: '700', color: item.checked ? c.subtext : c.text, fontVariant: ['tabular-nums'] }}>
+        <Text style={{ fontSize: 15, fontWeight: '600', color: item.checked ? c.subtext : c.text, fontVariant: ['tabular-nums'] }}>
           {formatCurrency(item.qty * item.price)}
         </Text>
       )}
 
-      {/* Edit */}
-      <Pressable onPress={onEdit} hitSlop={8}>
-        <Ionicons name="create-outline" size={18} color={c.subtext} />
+      <Pressable onPress={onEdit} hitSlop={10}>
+        <Ionicons name="ellipsis-horizontal-outline" size={16} color={c.subtext} />
       </Pressable>
     </Pressable>
   )
@@ -300,46 +294,49 @@ function InitScreen({ onSelect }: { onSelect: (mode: InitMode) => void }) {
   const c      = useColors()
   const insets = useSafeAreaInsets()
 
-  const OPTIONS: { mode: InitMode; icon: keyof typeof Ionicons.glyphMap; label: string; desc: string; gradient: [string, string] }[] = [
-    { mode: 'from_last', icon: 'copy-outline',      label: 'Última feira',     desc: 'Começar com os itens da feira mais recente', gradient: [PRIMARY + 'DD', PRIMARY] },
-    { mode: 'empty',     icon: 'add-circle-outline', label: 'Lista em branco',  desc: 'Adicionar itens manualmente',                gradient: ['#6366F1DD', '#6366F1'] },
-    { mode: 'barcode',   icon: 'scan-outline',        label: 'Scan de código',   desc: 'Digitalizar produtos pelo código de barras',  gradient: ['#F59E0BDD', '#F59E0B'] },
+  const OPTIONS: { mode: InitMode; icon: keyof typeof Ionicons.glyphMap; label: string; desc: string; accent: string }[] = [
+    { mode: 'from_last', icon: 'copy-outline',  label: 'Última feira',    desc: 'Começa com os itens da feira anterior', accent: PRIMARY },
+    { mode: 'empty',     icon: 'list-outline',  label: 'Lista em branco', desc: 'Adicionar itens manualmente',           accent: '#6366F1' },
+    { mode: 'barcode',   icon: 'scan-outline',  label: 'Scan de código',  desc: 'Digitalizar produtos pelo código',      accent: '#F59E0B' },
   ]
 
   return (
     <View style={{ flex: 1, backgroundColor: c.background }}>
       <ScrollView
-        contentContainerStyle={{ paddingTop: insets.top + 16, paddingHorizontal: 16, paddingBottom: insets.bottom + 120, gap: 20 }}
+        contentContainerStyle={{ paddingTop: insets.top + 24, paddingHorizontal: 16, paddingBottom: insets.bottom + 120, gap: 16 }}
         showsVerticalScrollIndicator={false}
       >
-        <View>
-          <Text style={{ fontSize: 28, fontWeight: '900', color: c.text }}>Próxima Feira</Text>
-          <Text style={{ fontSize: 13, color: c.subtext, marginTop: 2 }}>Como quer começar a sua lista?</Text>
+        <View style={{ marginBottom: 8 }}>
+          <Text style={{ fontSize: 24, fontWeight: '700', color: c.text }}>Próxima Feira</Text>
+          <Text style={{ fontSize: 13, color: c.subtext, marginTop: 4 }}>Como quer começar?</Text>
         </View>
 
-        <View style={{ gap: 14, marginTop: 8 }}>
-          {OPTIONS.map((opt) => (
-            <Pressable key={opt.mode} onPress={() => onSelect(opt.mode)}>
-              <LinearGradient
-                colors={opt.gradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={{ borderRadius: 24, padding: 24, gap: 10 }}
-              >
-                <View style={{ width: 52, height: 52, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.25)', justifyContent: 'center', alignItems: 'center' }}>
-                  <Ionicons name={opt.icon} size={26} color="#fff" />
-                </View>
-                <View style={{ gap: 4 }}>
-                  <Text style={{ fontSize: 20, fontWeight: '900', color: '#fff' }}>{opt.label}</Text>
-                  <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)', fontWeight: '500' }}>{opt.desc}</Text>
-                </View>
-                <View style={{ alignSelf: 'flex-end' }}>
-                  <Ionicons name="arrow-forward-circle" size={28} color="rgba(255,255,255,0.7)" />
-                </View>
-              </LinearGradient>
-            </Pressable>
-          ))}
-        </View>
+        {OPTIONS.map((opt) => (
+          <Pressable key={opt.mode} onPress={() => onSelect(opt.mode)}
+            style={({ pressed }) => ({
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 16,
+              backgroundColor: pressed ? c.inputBg : c.card,
+              borderRadius: 16,
+              padding: 20,
+              overflow: 'hidden',
+              ...(c.isDark ? {} : CARD_BORDER),
+            })}
+          >
+            {/* Left accent strip */}
+            <View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, backgroundColor: opt.accent }} />
+
+            <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: opt.accent + '15', justifyContent: 'center', alignItems: 'center' }}>
+              <Ionicons name={opt.icon} size={20} color={opt.accent} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 15, fontWeight: '600', color: c.text }}>{opt.label}</Text>
+              <Text style={{ fontSize: 12, color: c.subtext, marginTop: 2 }}>{opt.desc}</Text>
+            </View>
+            <Ionicons name="chevron-forward-outline" size={16} color={c.subtext} />
+          </Pressable>
+        ))}
       </ScrollView>
     </View>
   )
@@ -502,46 +499,45 @@ export default function ListaScreen() {
       {/* Header */}
       <View
         style={{
-          paddingTop: insets.top + 12,
-          paddingHorizontal: 16,
-          paddingBottom: 12,
+          paddingTop: insets.top + 16,
+          paddingHorizontal: 20,
+          paddingBottom: 16,
           backgroundColor: c.card,
-          gap: 12,
-          ...(c.isDark ? {} : { shadowColor: '#101828', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 4 }),
+          gap: 14,
+          borderBottomWidth: 1,
+          borderBottomColor: c.border,
         }}
       >
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 22, fontWeight: '900', color: c.text }}>Próxima Feira</Text>
-            <Text style={{ fontSize: 12, color: c.subtext }}>
-              {sl.checkedCount}/{sl.totalCount} itens · {formatCurrency(sl.total)} verificados
+            <Text style={{ fontSize: 20, fontWeight: '700', color: c.text }}>Lista de compras</Text>
+            <Text style={{ fontSize: 12, color: c.subtext, marginTop: 2 }}>
+              {sl.checkedCount} de {sl.totalCount} itens
             </Text>
           </View>
-          {/* Scan button */}
-          <Pressable onPress={() => setShowScanner(true)}
-            style={{ width: 42, height: 42, borderRadius: 14, backgroundColor: c.primary + '18', justifyContent: 'center', alignItems: 'center', marginRight: 8 }}>
-            <Ionicons name="scan-outline" size={20} color={c.primary} />
+          <Pressable onPress={() => setShowScanner(true)} hitSlop={8} style={{ marginRight: 16 }}>
+            <Ionicons name="scan-outline" size={22} color={c.subtext} />
           </Pressable>
-          {/* Clear */}
           <Pressable
+            hitSlop={8}
             onPress={() => Alert.alert('Limpar lista', 'Deseja apagar a lista atual?', [
               { text: 'Cancelar', style: 'cancel' },
               { text: 'Limpar', style: 'destructive', onPress: sl.clearList },
             ])}
-            style={{ width: 42, height: 42, borderRadius: 14, backgroundColor: c.danger + '18', justifyContent: 'center', alignItems: 'center' }}>
-            <Ionicons name="trash-outline" size={20} color={c.danger} />
+          >
+            <Ionicons name="trash-outline" size={20} color={c.subtext} />
           </Pressable>
         </View>
 
-        {/* Progress bar */}
-        <View style={{ height: 6, backgroundColor: c.border, borderRadius: 3, overflow: 'hidden' }}>
-          <View style={{ height: '100%', width: `${progress * 100}%`, backgroundColor: PRIMARY, borderRadius: 3 }} />
+        {/* Progress bar — thin */}
+        <View style={{ height: 3, backgroundColor: c.border, borderRadius: 2, overflow: 'hidden' }}>
+          <View style={{ height: '100%', width: `${progress * 100}%`, backgroundColor: PRIMARY, borderRadius: 2 }} />
         </View>
 
-        {/* Total pill */}
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Text style={{ fontSize: 12, fontWeight: '600', color: c.subtext }}>Total estimado</Text>
-          <Text style={{ fontSize: 20, fontWeight: '900', color: c.text, fontVariant: ['tabular-nums'] }}>
+        {/* Total */}
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
+          <Text style={{ fontSize: 13, color: c.subtext }}>Total</Text>
+          <Text style={{ fontSize: 26, fontWeight: '700', color: PRIMARY, fontVariant: ['tabular-nums'] }}>
             {formatCurrency(sl.grandTotal)}
           </Text>
         </View>
@@ -585,33 +581,34 @@ export default function ListaScreen() {
           paddingHorizontal: 16,
           flexDirection: 'row',
           gap: 10,
-          backgroundColor: c.background,
+          backgroundColor: c.card,
+          borderTopWidth: 1,
+          borderTopColor: c.border,
         }}
       >
         <Pressable
           onPress={() => { setPendingBarcode(undefined); setPendingName(undefined); setPendingPrice(undefined); setShowAddModal(true) }}
-          style={{ flex: 1, backgroundColor: c.card, borderRadius: 16, paddingVertical: 16, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8, ...(c.isDark ? {} : CARD_SHADOW) }}
+          style={{ flex: 1, borderRadius: 14, paddingVertical: 15, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: c.border }}
         >
-          <Ionicons name="add-circle-outline" size={20} color={PRIMARY} />
-          <Text style={{ fontSize: 15, fontWeight: '700', color: PRIMARY }}>Adicionar</Text>
+          <Text style={{ fontSize: 15, fontWeight: '600', color: c.text }}>+ Adicionar</Text>
         </Pressable>
 
         <Pressable
           onPress={handleFinalize}
           disabled={finalizing || sl.totalCount === 0}
-          style={{ flex: 1.6, borderRadius: 16, overflow: 'hidden' }}
+          style={{
+            flex: 1.6,
+            borderRadius: 14,
+            paddingVertical: 15,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: PRIMARY,
+            opacity: sl.totalCount === 0 ? 0.4 : 1,
+          }}
         >
-          <LinearGradient
-            colors={[PRIMARY + 'DD', PRIMARY]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={{ paddingVertical: 16, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8, opacity: sl.totalCount === 0 ? 0.5 : 1 }}
-          >
-            <Ionicons name="checkmark-done-outline" size={20} color="#fff" />
-            <Text style={{ fontSize: 15, fontWeight: '800', color: '#fff' }}>
-              {finalizing ? 'A guardar…' : 'Finalizar Feira'}
-            </Text>
-          </LinearGradient>
+          <Text style={{ fontSize: 15, fontWeight: '700', color: '#fff' }}>
+            {finalizing ? 'A guardar…' : 'Finalizar'}
+          </Text>
         </Pressable>
       </View>
 

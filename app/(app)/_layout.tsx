@@ -1,4 +1,4 @@
-import { Platform, Pressable, Text, View } from 'react-native'
+import { Pressable, Text, View } from 'react-native'
 import { Tabs } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -32,9 +32,8 @@ function PersistentTabBar({ state, navigation }: BottomTabBarProps) {
         paddingHorizontal: 8,
         flexDirection: 'row',
         backgroundColor: c.card,
-        ...(Platform.OS === 'ios'
-          ? { shadowColor: '#101828', shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.1, shadowRadius: 16 }
-          : { elevation: 20 }),
+        borderTopWidth: 1,
+        borderTopColor: '#EEEEEE',
       }}
     >
       {TAB_DEFS.map((tab) => {

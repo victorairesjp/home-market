@@ -16,25 +16,25 @@ import { AddItemForm } from '@/components/feiras/add-item-form'
 import { Loading } from '@/components/ui/loading'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Button } from '@/components/ui/button'
-import { useColors, CARD_SHADOW, SHADOW_SM } from '@/constants/colors'
+import { useColors, CARD_SHADOW, SHADOW_SM, CARD_BORDER } from '@/constants/colors'
 import { CATEGORY_COLORS } from '@/constants/app'
 import { useFeira, useUpdateFeira } from '@/hooks/use-feiras'
 import { useDeleteFeiraItem, useUpdateFeiraItem } from '@/hooks/use-feira-items'
 import { formatCurrency, formatDateForInput, formatDateShort } from '@/lib/format'
 import type { FeiraItemWithProduct } from '@/types/database'
 
-const CATEGORY_ICONS: Record<string, string> = {
-  Frutas:     '🍎',
-  Verduras:   '🥦',
-  Carnes:     '🥩',
-  Laticínios: '🥛',
-  Cereais:    '🌾',
-  Bebidas:    '🧃',
-  Padaria:    '🍞',
-  Limpeza:    '🧹',
-  Higiene:    '🧴',
-  Congelados: '🧊',
-  Outros:     '📦',
+const CATEGORY_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
+  'Frutas':           'nutrition-outline',
+  'Verduras':         'leaf-outline',
+  'Carnes':           'restaurant-outline',
+  'Laticínios':       'water-outline',
+  'Grãos e Cereais':  'grid-outline',
+  'Bebidas':          'wine-outline',
+  'Lanches':          'cafe-outline',
+  'Guloseimas':       'heart-outline',
+  'Higiene':          'medkit-outline',
+  'Limpeza':          'home-outline',
+  'Outros':           'cube-outline',
 }
 
 function ItemRow({
@@ -49,8 +49,8 @@ function ItemRow({
   const c = useColors()
   const { mutate: deleteItem } = useDeleteFeiraItem(feiraId)
   const { mutate: updateItem } = useUpdateFeiraItem(feiraId)
-  const catColor = CATEGORY_COLORS[item.products.category] ?? '#9E9E9E'
-  const emoji = CATEGORY_ICONS[item.products.category] ?? '📦'
+  const catColor  = CATEGORY_COLORS[item.products.category] ?? '#9E9E9E'
+  const catIcon   = CATEGORY_ICONS[item.products.category] ?? 'cube-outline'
 
   function handleDelete() {
     Alert.alert('Remover Item', `Remover "${item.products.name}"?`, [
@@ -73,32 +73,36 @@ function ItemRow({
       <View
         style={{
           backgroundColor: c.card,
-          borderRadius: 20,
+          borderRadius: 14,
           padding: 14,
           flexDirection: 'row',
           alignItems: 'center',
           gap: 12,
-          ...(c.isDark ? {} : CARD_SHADOW),
+          overflow: 'hidden',
+          ...(c.isDark ? {} : CARD_BORDER),
         }}
       >
+        {/* Left accent strip */}
+        <View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, backgroundColor: catColor }} />
+
         {/* Category icon */}
         <View
           style={{
-            width: 52,
-            height: 52,
-            borderRadius: 16,
-            backgroundColor: catColor + '20',
+            width: 36,
+            height: 36,
+            borderRadius: 10,
+            backgroundColor: catColor + '15',
             justifyContent: 'center',
             alignItems: 'center',
             flexShrink: 0,
           }}
         >
-          <Text style={{ fontSize: 26 }}>{emoji}</Text>
+          <Ionicons name={catIcon} size={18} color={catColor} />
         </View>
 
         {/* Name + category + unit price */}
         <View style={{ flex: 1, gap: 2 }}>
-          <Text style={{ fontSize: 15, fontWeight: '700', color: c.text }} numberOfLines={1}>
+          <Text style={{ fontSize: 15, fontWeight: '500', color: c.text }} numberOfLines={1}>
             {item.products.name}
           </Text>
           <Text style={{ fontSize: 12, color: c.subtext }}>

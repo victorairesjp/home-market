@@ -5,25 +5,29 @@ export const DANGER  = '#FF6B6B'
 export const SUCCESS = '#26A96C'
 export const WARNING = '#FFB020'
 
-// Consistent shadow helper for iOS + Android
 export const CARD_SHADOW = {
-  shadowColor: '#101828',
-  shadowOffset: { width: 0, height: 2 },
-  shadowOpacity: 0.08,
-  shadowRadius: 12,
-  elevation: 4,
-}
-
-export const SHADOW_SM = {
-  shadowColor: '#101828',
+  shadowColor: '#000',
   shadowOffset: { width: 0, height: 1 },
-  shadowOpacity: 0.05,
+  shadowOpacity: 0.04,
   shadowRadius: 6,
   elevation: 2,
 }
 
+export const SHADOW_SM = {
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 1 },
+  shadowOpacity: 0.03,
+  shadowRadius: 3,
+  elevation: 1,
+}
+
+export const CARD_BORDER = {
+  borderWidth: 1,
+  borderColor: '#EEEEEE',
+}
+
 const light = {
-  background: '#F8F9FA',
+  background: '#FAFAFA',
   card:       '#FFFFFF',
   text:       '#1C2127',
   subtext:    '#9098B1',
